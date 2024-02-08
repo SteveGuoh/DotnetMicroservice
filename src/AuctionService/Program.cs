@@ -13,7 +13,8 @@ builder.Services.AddCors(options =>
                       policy =>
                       {
                           policy.WithOrigins("http://localhost:3000")
-                                .AllowAnyMethod();
+                                .AllowAnyMethod()
+                                .AllowAnyHeader();
                       });
 });
 
@@ -62,11 +63,12 @@ builder.Services.AddScoped<IAuctionRepository, AuctionRepository>();
 
 var app = builder.Build();
 
-app.UseCors(MyAllowSpecificOrigins);
 
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseCors(MyAllowSpecificOrigins);
 
 app.MapControllers();
 
