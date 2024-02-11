@@ -60,6 +60,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddScoped<IAuctionRepository, AuctionRepository>();
+builder.Services.AddGrpc();
 
 var app = builder.Build();
 
@@ -71,6 +72,8 @@ app.UseAuthorization();
 app.UseCors(MyAllowSpecificOrigins);
 
 app.MapControllers();
+
+app.MapGrpcService<GrpcAuctionService>();
 
 try
 {
