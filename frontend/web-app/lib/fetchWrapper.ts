@@ -51,8 +51,14 @@ async function getHeaders() {
 }
 
 async function handleResponse(response: Response) {
+    console.log
     const text = await response.text();
-    const data = text && JSON.parse(text);
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (error) {
+        data = text;
+    }
 
 
     if (response.ok) {
@@ -60,7 +66,7 @@ async function handleResponse(response: Response) {
     } else {
         const error = {
             status: response.status,
-            message: response.statusText,
+            message: (typeof data==='string' && data !=='') ? data : response.statusText,
         };
         return { error };
     }
