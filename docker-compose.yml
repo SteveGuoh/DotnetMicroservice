@@ -1,3 +1,9 @@
+networks:
+  custom:
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
+
 services:
   postgres:
     image: postgres
@@ -7,6 +13,8 @@ services:
       POSTGRES_PASSWORD: postgrespw
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      custom:
   mongo:
     image: mongo
     environment:
@@ -15,12 +23,16 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - mongodata:/var/lib/mongodb/data
+      - mongodata:/var/lib/mongodb/dat
+    networks:
+      custom:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     ports:
       - "5672:5672"
       - "15672:15672"
+    networks:
+      custom:
   auction-svc:
     image: steveguoh/auction-svc:latest
     build: 
@@ -43,6 +55,8 @@ services:
     depends_on:
       - rabbitmq
       - postgres
+    networks:
+      custom:
 
   search-svc:
     image: steveguoh/search-svc:latest
@@ -60,6 +74,8 @@ services:
     depends_on:
       - rabbitmq
       - mongo
+    networks:
+      custom:
 
   identity-svc:
     image: steveguoh/identity-svc:latest
@@ -69,11 +85,14 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:80
+      - ClientAPP=http://app.code.com
       - ConnectionStrings__DefaultConnection=Server=postgres:5432; User Id=postgres; Password=postgrespw; Database=identity
-    ports:
-      - "5000:80"
+      - VIRTUAL_HOST=id.code.com
     depends_on:
       - postgres
+    networks:
+      custom:
+        ipv4_address: 10.5.0.200
 
   gateway-svc:
     image: steveguoh/gateway-svc:latest
@@ -83,8 +102,10 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:80
-    ports:
-      - "6001:80"
+      - ClientApp=https://app.code.com
+      - VIRTUAL_HOST=api.code.com
+    networks:
+      custom:
 
   bid-svc:
     image: steveguoh/bid-svc:latest
@@ -103,6 +124,8 @@ services:
     depends_on:
       - rabbitmq
       - mongo
+    networks:
+      custom:
 
   notify-svc:
     image: steveguoh/notify-svc:latest
@@ -117,6 +140,40 @@ services:
       - "7004:80"
     depends_on:
       - rabbitmq
+    networks:
+      custom:
+
+  web-app:
+    image: steveguoh/web-app
+    build: 
+      context: .
+      dockerfile: frontend/web-app/Dockerfile
+    volumes:
+      - /var/lib/web/data
+    extra_hosts:
+      - id.code.com:10.5.0.200
+    environment:
+      - NEXTAUTH_SECRET=somethingreallyllysecret
+      - NEXTAUTH_URL=http://app.code.com
+      - NEXTAUTH_URL_INTERNAL=http://web-app:3000
+      - API_URL=http://gateway-svc/
+      - ID_URL=http://id.code.com
+      - NEXT_PUBLIC_NOTIFY_URL=http://gateway-svc/notifications
+      - VIRTUAL_HOST=app.code.com
+      - VIRTUAL_PORT=3000
+    networks:
+      custom:
+
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      custom:
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./devcerts:/etc/nginx/certs
 
 volumes:
   pgdata:
